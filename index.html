@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory Optimization with Lead Time</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--border:#d1d5db;--accent:#2563eb;--accent2:#0f766e;--warn:#b45309;--danger:#b91c1c;--soft:#eff6ff}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    header{background:var(--card);border-bottom:1px solid var(--border);padding:14px 18px;position:sticky;top:0;z-index:10}
+    h1{font-size:21px;margin:0 0 8px}.sub{color:var(--muted);font-size:13px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.btn{border:1px solid var(--border);background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:600}.btn.primary{background:var(--accent);color:white;border-color:var(--accent)}.btn.good{background:var(--accent2);color:white;border-color:var(--accent2)}
+    .btn:hover{filter:brightness(.96)} input[type=file]{display:none}
+    main{padding:14px 18px}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.tab{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 12px;cursor:pointer}.tab.active{background:var(--accent);color:white;border-color:var(--accent)}
+    section{display:none}.show{display:block}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}.metric{background:var(--soft);border-radius:12px;padding:12px}.metric b{font-size:20px;display:block;margin-top:4px}.muted{color:var(--muted);font-size:13px}.status{margin-top:8px;color:var(--accent2);font-size:13px}
+    table{border-collapse:collapse;width:100%;background:#fff}.tablewrap{overflow:auto;max-height:520px;border:1px solid var(--border);border-radius:12px} th,td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left;white-space:nowrap;font-size:13px} th{background:#f3f4f6;position:sticky;top:0;z-index:1} td[contenteditable=true]{background:#fffef2;outline-color:var(--accent)}
+    canvas{width:100%;height:320px;border:1px solid var(--border);border-radius:12px;background:white}.guide h2{font-size:18px;margin-top:18px}.guide code{background:#f3f4f6;padding:2px 5px;border-radius:4px}.warn{color:var(--warn)}.danger{color:var(--danger)}
+    @media(max-width:900px){.grid,.grid3{grid-template-columns:1fr} header{position:static}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Inventory Optimization with Lead Time – Web App</h1>
+  <div class="sub">Mô hình tối ưu tồn kho có xét lead time, EOQ, safety stock, reorder point và các chi phí cơ bản. Chạy trực tiếp trên trình duyệt.</div>
+  <div class="toolbar">
+    <button class="btn" id="btnTemplate">1. Create Excel Template</button>
+    <button class="btn" id="btnLoad">2. Load Excel Data</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+    <button class="btn" id="btnDemo">Load Demo Data</button>
+    <button class="btn" id="btnApply">Apply Edited Data</button>
+    <button class="btn primary" id="btnRun">3. RUN Optimization</button>
+    <button class="btn good" id="btnExport">4. Export Results</button>
+  </div>
+  <div class="status" id="status">Ready. Dùng Create Template hoặc Load Demo Data để bắt đầu.</div>
+</header>
+<main>
+  <div class="tabs">
+    <button class="tab active" data-tab="input">1. Input Data</button>
+    <button class="tab" data-tab="results">2. Optimization Results</button>
+    <button class="tab" data-tab="cost">3. Cost Dashboard</button>
+    <button class="tab" data-tab="policy">4. Inventory Policy</button>
+    <button class="tab" data-tab="guide">5. Guide & Formulas</button>
+  </div>
+
+  <section id="input" class="show">
+    <div class="card">
+      <h2>Input Controls – Import Excel / Manual Edit / Run</h2>
+      <p class="muted">Sheet yêu cầu: <b>Items</b>. Có thể sửa trực tiếp trong bảng màu vàng nhạt, sau đó bấm <b>Apply Edited Data</b> và <b>RUN Optimization</b>.</p>
+      <div class="tablewrap"><table id="inputTable"></table></div>
+    </div>
+  </section>
+
+  <section id="results">
+    <div class="grid3" id="metrics"></div>
+    <div class="card" style="margin-top:12px"><h2>Optimization Results</h2><div class="tablewrap"><table id="resultTable"></table></div></div>
+    <div class="card" style="margin-top:12px"><h2>Executive Summary</h2><div id="summary" class="muted">Optimization summary will appear here.</div></div>
+  </section>
+
+  <section id="cost">
+    <div class="grid">
+      <div class="card"><h2>Annual Cost Components</h2><canvas id="costCanvas" width="900" height="360"></canvas></div>
+      <div class="card"><h2>Total Annual Cost by Item</h2><canvas id="itemCostCanvas" width="900" height="360"></canvas></div>
+    </div>
+  </section>
+
+  <section id="policy">
+    <div class="grid">
+      <div class="card"><h2>EOQ / ROP / Safety Stock</h2><canvas id="policyCanvas" width="900" height="360"></canvas></div>
+      <div class="card"><h2>Service Level and Expected Shortage</h2><canvas id="serviceCanvas" width="900" height="360"></canvas></div>
+    </div>
+  </section>
+
+  <section id="guide" class="guide card">
+    <h2>Mục đích</h2>
+    <p>Phần mềm hỗ trợ tính chính sách tồn kho theo mô hình kiểm soát liên tục: xác định EOQ, tồn kho an toàn, điểm đặt hàng lại, đề xuất lượng đặt hàng và ước tính chi phí tồn kho năm.</p>
+    <h2>Dữ liệu đầu vào</h2>
+    <p>Mỗi dòng là một SKU/mặt hàng. Các cột bắt buộc gồm: Item_ID, Item_Name, Annual_Demand_D, Demand_Std_Daily, LeadTime_Days, LeadTime_Std_Days, Ordering_Cost_S, Holding_Cost_H_Year, Unit_Cost_C, Shortage_Cost_p, Service_Level, Current_Inventory, On_Order, Min_Order_Qty, Max_Order_Qty, Capacity_Max_Inventory, Transport_Cost_Per_Order, Fixed_Order_Cost.</p>
+    <h2>Công thức chính</h2>
+    <p>Daily demand: <code>d = D / 365</code></p>
+    <p>EOQ: <code>Q* = sqrt(2DS / H)</code></p>
+    <p>Mean demand during lead time: <code>mu_LT = d × L</code></p>
+    <p>Standard deviation during lead time: <code>sigma_LT = sqrt(L × sigma_d^2 + d^2 × sigma_L^2)</code></p>
+    <p>Safety stock: <code>SS = z × sigma_LT</code></p>
+    <p>Reorder point: <code>ROP = mu_LT + SS</code></p>
+    <p>Inventory position: <code>Current inventory + On-order inventory</code></p>
+    <p>Total annual cost: <code>Purchase + Ordering + Holding + Expected shortage</code></p>
+    <h2>Quy trình sử dụng</h2>
+    <p><b>Create Excel Template → điền dữ liệu → Load Excel Data → RUN Optimization → Export Results</b></p>
+    <p class="warn">Lưu ý: Nếu file Excel không đọc được, hãy kiểm tra tên sheet là Items và tên cột không bị thay đổi.</p>
+  </section>
+</main>
+<script src="./js/config.js"></script>
+<script src="./js/app.js"></script>
+
+</body>
+</html>

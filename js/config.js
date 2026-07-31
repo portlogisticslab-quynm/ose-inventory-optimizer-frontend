@@ -1,0 +1,1 @@
+window.INVENTORY_APP_CONFIG={API_BASE_URL:"https://ose-inventory-optimizer-backend.onrender.com"};
