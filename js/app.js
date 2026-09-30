@@ -1,5 +1,40 @@
 
-const API_BASE_URL=(window.INVENTORY_APP_CONFIG?.API_BASE_URL||"").replace(/\/+$/,"");
+async function apiPost(path, body) {
+  const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  if (window.oseFetch) return window.oseFetch(path, opts);           // home → Render tự động
+  const base = (window.OSE_API_BASE || window.INVENTORY_APP_CONFIG?.API_BASE_URL || '').replace(/\/+$/, '');
+  return fetch(base + path, opts);
+}
+
+async function runOptimization() {
+  const btn = document.getElementById('btnRun');
+  try {
+    readEditedInput();
+    btn.disabled = true;
+    setStatus('Đang kết nối máy chủ...');
+    const base = String(await window.OSE_API_READY || window.OSE_API_BASE || '');
+    setStatus(base.includes('onrender.com')
+      ? 'Đang tính trên Render (lần đầu có thể mất 30–60 giây)...'
+      : 'Backend is calculating...');
+    const r = await apiPost('/api/optimize', { items: inputData, planning_days: 365, currency: 'VND' });
+    const text = await r.text();
+    let p;
+    try { p = JSON.parse(text); } catch { throw new Error(`Máy chủ trả về phản hồi không hợp lệ (HTTP ${r.status})`); }
+    if (!r.ok) throw new Error(typeof p.detail === 'string' ? p.detail : JSON.stringify(p.detail || 'Backend error'));
+    results = p.results;
+    renderTable('resultTable', results);
+    updateMetrics();
+    updateSummary(p.summary);
+    drawAll();
+    setStatus(p.message);
+    showTab('results');
+  } catch (e) {
+    setStatus('Error: ' + e.message);
+    alert(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
 const requiredCols=['Item_ID','Item_Name','Annual_Demand_D','Demand_Std_Daily','LeadTime_Days','LeadTime_Std_Days','Ordering_Cost_S','Holding_Cost_H_Year','Unit_Cost_C','Shortage_Cost_p','Service_Level','Current_Inventory','On_Order','Min_Order_Qty','Max_Order_Qty','Capacity_Max_Inventory','Transport_Cost_Per_Order','Fixed_Order_Cost'];
 let inputData=[],results=[];
 
