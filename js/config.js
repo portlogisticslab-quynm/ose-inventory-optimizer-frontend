@@ -1,7 +1,7 @@
 /* OSE backend selector: home server first, Render as fallback. */
 (function () {
   const BACKENDS = {
-    home:   "https://api-inventory-optimizer.ose.vn",
+    home:   "https://inventory-optimizer.ose.vn",
     render: "https://ose-inventory-optimizer-backend.onrender.com",
     local:  "http://127.0.0.1:8004",
   };
