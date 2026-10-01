@@ -1,5 +1,6 @@
 /* OSE backend selector: home server first, Render as fallback. */
 (function () {
+  if (window.oseFetch) return; // already loaded
   const BACKENDS = {
     home:   "https://inventory-optimizer.ose.vn",
     render: "https://ose-inventory-optimizer-backend.onrender.com",
