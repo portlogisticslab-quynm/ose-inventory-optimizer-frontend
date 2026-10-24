@@ -1,32 +1,19 @@
 
-async function apiPost(path, body) {
-  const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
-  if (window.oseFetch) return window.oseFetch(path, opts);           // home → Render tự động
-  const base = (window.OSE_API_BASE || window.INVENTORY_APP_CONFIG?.API_BASE_URL || '').replace(/\/+$/, '');
-  return fetch(base + path, opts);
-}
-
-async function runOptimization() {
+/* Inventory Optimization — UI. All computation runs in the browser (js/inventory-engine.js), no backend. */
+function runOptimization() {
   const btn = document.getElementById('btnRun');
   try {
     readEditedInput();
     btn.disabled = true;
-    setStatus('Đang kết nối máy chủ...');
-    const base = String(await window.OSE_API_READY || window.OSE_API_BASE || '');
-    setStatus(base.includes('onrender.com')
-      ? 'Đang tính trên Render (lần đầu có thể mất 30–60 giây)...'
-      : 'Backend is calculating...');
-    const r = await apiPost('/api/optimize', { items: inputData, planning_days: 365, currency: 'VND' });
-    const text = await r.text();
-    let p;
-    try { p = JSON.parse(text); } catch { throw new Error(`Máy chủ trả về phản hồi không hợp lệ (HTTP ${r.status})`); }
-    if (!r.ok) throw new Error(typeof p.detail === 'string' ? p.detail : JSON.stringify(p.detail || 'Backend error'));
+    const t0 = performance.now();
+    const p = window.InventoryEngine.optimize({ items: inputData, planning_days: 365 });
+    const ms = performance.now() - t0;
     results = p.results;
     renderTable('resultTable', results);
     updateMetrics();
     updateSummary(p.summary);
     drawAll();
-    setStatus(p.message);
+    setStatus(`${p.message} (${ms < 1 ? '<1' : Math.round(ms)} ms, tính trên trình duyệt)`);
     showTab('results');
   } catch (e) {
     setStatus('Error: ' + e.message);

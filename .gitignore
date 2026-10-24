@@ -1,5 +1,5 @@
-﻿.vscode/
+.vscode/
 .DS_Store
 Thumbs.db
 .wrangler/
-.wrangler/
+node_modules/
